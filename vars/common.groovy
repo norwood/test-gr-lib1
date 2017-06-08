@@ -9,8 +9,8 @@ def call(body) {
 
   // now build, based on the configuration provided
   // variables passed in body are available as ${config.var}
-  def slackChannel = ${config.slackChannel} ?: '#github'
-  def slackAlwaysNotify = ${config.slackAlwaysNotify} ?: false
+  def slackChannel = config.slackChannel ?: '#github'
+  def slackAlwaysNotify = config.slackAlwaysNotify ?: false
 
   node('docker-openjdk7-wily') {
     stage('Preparation') {
