@@ -1,4 +1,4 @@
-def notifySlack() {
+def notifySlack2() {
   switch (currentBuild.currentResult) {
     case 'SUCCESS':
       if (currentBuild.previousBuild != null && currentBuild.previousBuild.currentResult != 'SUCCESS') {
