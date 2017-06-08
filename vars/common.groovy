@@ -9,6 +9,7 @@ def call(body) {
 
   // now build, based on the configuration provided
   // variables passed in body are available as ${config.var}
+  def slackChannel = ${config.slackChannel} ?: '#github'
 
   node('docker-openjdk7-wily') {
     stage('Preparation') {
@@ -29,29 +30,26 @@ def call(body) {
       step([$class: 'hudson.plugins.checkstyle.CheckStylePublisher', pattern: '**/target/checkstyle-result.xml', unstableTotalAll:'0'])
       step([$class: 'hudson.plugins.findbugs.FindBugsPublisher', pattern: '**/findbugsXml.xml'])
       archive 'target/*.jar'
+      def sendSlackMessage = true
+      def slackMessageColor = 'RED'
+      def slackMessage = "${env.JOB_NAME} - #[${env.BUILD_NUMBER}] Failure <${env.BUILD_URL}|(Open)>"
       switch (currentBuild.currentResult) {
         case 'SUCCESS':
-          if (currentBuild.previousBuild != null && currentBuild.previousBuild.currentResult != 'SUCCESS') {
-            slackSend(channel: '#clients-eng', color: 'good', message: "${env.JOB_NAME} - #[${env.BUILD_NUMBER}] Success <${env.BUILD_URL}|(Open)>", teamDomain: 'confluent')
-          }
+          slackMessageColor = 'GREEN'
+          sendSlackMessage = currentBuild.previousBuild != null && currentBuild.previousBuild.currentResult != 'SUCCESS'
           break;
         case 'UNSTABLE':
-          slackSend(channel: '#clients-eng', color: 'YELLOW', message: "${env.JOB_NAME} - #[${env.BUILD_NUMBER}] Unstable <${env.BUILD_URL}|(Open)>", teamDomain: 'confluent')
-          break;
-        case 'FAILURE':
-        default:
-          slackSend(channel: '#clients-eng', color: 'bad', message: "${env.JOB_NAME} - #[${env.BUILD_NUMBER}] Failure <${env.BUILD_URL}|(Open)>", teamDomain: 'confluent')
+          slackMessageColor = 'YELLOW'
           break;
       }
-
-      if (env.BRANCH_NAME.contains('/pull/')) {
-        if (currentBuild.currentResult == 'SUCCESS') {
-          githubNotify description: 'tests passed :)',  status: currentBuild.currentResult
-        } else {
-          githubNotify description: 'tests failed :(',  status: currentBuild.currentResult
-        }
+      if (sendSlackMessage) {
+        slackSend(
+          channel: slackChannel,
+          color: slackMessageColor,
+          message: "${env.JOB_NAME} - #[${env.BUILD_NUMBER}] ${currentBuild.currentResult} <${env.BUILD_URL}|(Open)>",
+          teamDomain: 'confluent'
+        )
       }
-
     }
   }
 }
